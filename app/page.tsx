@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import { Field, FieldContent } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { GoogleGenAI } from "@google/genai";
+import { safeParseAIResponse, ai } from "@/lib/gemini-utils";
+import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
   const [responses, setResponses] = useState<string[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parsedResponses, setParsedResponses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,41 +29,31 @@ export default function Home() {
         "rubrica_avaliacao": "Critérios de avaliação com níveis: Excelente, Bom, Satisfatório e Precisa de Apoio"
       }
 
-      Não use markdown, blocos de código, nem texto fora do JSON.
+      Não use markdown, blocos de código, nem caracteres a fim de adicionar "Negrito" ou "Itálico", nem texto fora do JSON.
   `;
 
-  function safeParseAIResponse(response: string) {
-    try {
-      const treated_response = response.replace(/```json|```/g, "").trim();
-      return JSON.parse(treated_response);
-    } catch (err) {
-      console.warn("Falha ao fazer parse do JSON: ", err);
-      return null;
-    }
-  }
-
-  // apiKey is defined in .env
-  const ai = new GoogleGenAI({
-    apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY,
-  });
+  const ai_settings = {
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user",
+      },
+    ],
+    config: {
+      systemInstruction: instructions,
+    },
+  };
 
   async function generateResponse(userMessage: string, messageIndex: number) {
     setIsLoading(true);
     try {
       const res = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: userMessage }],
-          },
-        ],
-        config: {
-          systemInstruction: instructions,
-        },
+        ...ai_settings,
+        contents: [{ parts: [{ text: userMessage }] }],
       });
 
       const aiResponse = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const parsed = safeParseAIResponse(aiResponse);
 
       setResponses((prev) => {
         const updated = [...prev];
@@ -72,9 +63,21 @@ export default function Home() {
 
       setParsedResponses((prev) => {
         const updated = [...prev];
-        updated[messageIndex] = aiResponse;
+        updated[messageIndex] = parsed;
         return updated;
       });
+
+      if (parsed) {
+        await salvarPlanoDeAula({
+          entrada_user: { prompt: message },
+          resposta_ia: parsed,
+          titulo: parsed.titulo || null,
+          introducao: parsed.introducao || null,
+          objetivo_bncc: parsed.objetivo_bncc || null,
+          roteiro: parsed.roteiro || null,
+          rubrica_avaliacao: parsed.rubrica_avaliacao || null,
+        });
+      }
     } catch (error) {
       console.error("Error ao gerar resposta:", error);
       setResponses((prev) => {
@@ -85,6 +88,33 @@ export default function Home() {
       });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function salvarPlanoDeAula(planoDeAula: {
+    entrada_user: any;
+    resposta_ia: any;
+    titulo: string;
+    introducao: string;
+    objetivo_bncc: string;
+    roteiro: string;
+    rubrica_avaliacao: string;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from("PlanoDeAula")
+        .insert([planoDeAula])
+        .select();
+
+      if (error) throw error;
+
+      // Para fins de depuração
+      // TODO: Remover este console.log
+      console.log("Plano salvo com sucesso:", data);
+      return data;
+    } catch (err) {
+      console.error("Erro a o salvar plano", err);
+      return null;
     }
   }
 
@@ -100,18 +130,6 @@ export default function Home() {
     setParsedResponses((prev) => [...prev, null]);
 
     await generateResponse(message, currentMessageIndex);
-  };
-
-  const lastParsed = parsedResponses[parsedResponses.length - 1];
-
-  const planoDeAula = {
-    entrada_user: { prompt: message },
-    resposta_ia: lastParsed,
-    titulo: lastParsed?.titulo || null,
-    introducao: lastParsed?.introducao || null,
-    objetivo_bncc: lastParsed?.objetivo_bncc || null,
-    roteiro: lastParsed?.roteiro || null,
-    rubrica_avaliacao: lastParsed?.rubrica_avaliacao || null,
   };
 
   return (
@@ -145,48 +163,132 @@ export default function Home() {
               <div key={idx} className="flex flex-col gap-4">
                 {/* User Message */}
                 <div className="flex justify-end">
-                  <div className="bg-blue-500 text-white rounded-lg px-4 py-3 max-w-[85%]">
+                  <div className="bg-blue-500 text-white rounded-2xl px-4 py-3 shadow max-w-[80%]">
                     <p className="text-sm whitespace-pre-wrap">{msg}</p>
                   </div>
                 </div>
+
                 {/* AI Response */}
                 {responses[idx] && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-3 max-w-[85%]">
-                      <p className="text-sm whitespace-pre-wrap">
-                        {responses[idx]}
-                      </p>
+                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl px-4 py-3 shadow max-w-[80%] space-y-2">
+                      {parsedResponses[idx] ? (
+                        Object.entries(parsedResponses[idx])
+                          .filter(
+                            ([key]) =>
+                              !["id_plano_aula", "criado_em"].includes(key)
+                          )
+                          .map(([key, value]) => (
+                            <div
+                              key={key}
+                              className="border-l-2 border-gray-300 dark:border-gray-700 pl-3"
+                            >
+                              <p className="font-semibold capitalize text-sm mb-1 text-blue-600 dark:text-blue-400">
+                                {key.replace(/_/g, " ")}
+                              </p>
+                              {key === "rubrica_avaliacao" ? (
+                                (() => {
+                                  try {
+                                    const rubrica = JSON.parse(
+                                      value as string
+                                    ) as Record<
+                                      string,
+                                      string | Record<string, string>
+                                    >;
+                                    return (
+                                      <div className="pl-3 space-y-2 border-l-2 border-gray-300 dark:border-gray-700">
+                                        {Object.entries(rubrica).map(
+                                          ([criterio, detalhes]) => (
+                                            <div key={criterio}>
+                                              <p className="font-medium text-blue-500 dark:text-blue-400">
+                                                {criterio}
+                                              </p>
+                                              {typeof detalhes === "object" &&
+                                              detalhes !== null ? (
+                                                <ul className="list-disc pl-4">
+                                                  {Object.entries(
+                                                    detalhes as Record<
+                                                      string,
+                                                      string
+                                                    >
+                                                  ).map(
+                                                    ([nivel, descricao]) => (
+                                                      <li
+                                                        key={nivel}
+                                                        className="text-sm"
+                                                      >
+                                                        <strong>
+                                                          {nivel}:
+                                                        </strong>{" "}
+                                                        {String(descricao)}
+                                                      </li>
+                                                    )
+                                                  )}
+                                                </ul>
+                                              ) : (
+                                                <p className="text-sm">
+                                                  {String(detalhes)}
+                                                </p>
+                                              )}
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    );
+                                  } catch {
+                                    return (
+                                      <p className="text-sm">{String(value)}</p>
+                                    );
+                                  }
+                                })()
+                              ) : typeof value === "object" &&
+                                value !== null ? (
+                                <div className="space-y-1">
+                                  {Object.entries(value).map(
+                                    ([subKey, subValue]) => (
+                                      <p key={subKey} className="text-sm">
+                                        <span className="font-medium">
+                                          {subKey}:
+                                        </span>{" "}
+                                        {String(subValue)}
+                                      </p>
+                                    )
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-sm">{String(value)}</p>
+                              )}
+                            </div>
+                          ))
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">
+                          {responses[idx]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
             ))
           )}
+
           {/* Loading */}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3 max-w-[85%]">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3 max-w-[80%] shadow">
                 <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
+                  {[0, 150, 300].map((delay) => (
                     <div
+                      key={delay}
                       className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "0ms" }}
+                      style={{ animationDelay: `${delay}ms` }}
                     ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    ></div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
         </div>
-
         {/* Form */}
         <div className="sticky bottom-0 pt-4 bg-white dark:bg-black">
           <form onSubmit={handleSubmit} className="relative">
@@ -209,7 +311,7 @@ export default function Home() {
                   <Button
                     type="submit"
                     size="sm"
-                    className="absolute bottom-2 right-2 h-8 w-8 p-0 rounded-full"
+                    className="absolute z-10 bottom-2 right-2 h-8 w-8 p-0 rounded-full"
                     disabled={!message.trim() || isLoading}
                   >
                     <svg
