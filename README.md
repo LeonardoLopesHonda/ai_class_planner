@@ -46,7 +46,11 @@ NEXT_PUBLIC_SUPABASE_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 ```
 
-Coloque os valores de cada item.
+Coloque os valores de cada item. Caso queira gerar suas chaves utilize o [Google AI Studio](https://aistudio.google.com/welcome) e [Supabase](https://supabase.com)
+
+> > No Google AI Studio, após fazer o login, vá em `Get API key`. Em seguida `Criar chave de API`, selecione um projet e caso não tenha crie um. Depois dê nome para essa chave. Seu projeto será criado e assim poderá copiar o valor da chave e a colar no `.env`
+
+> >
 
 > Por questões de segurança de uso de chaves, para este desafio técnico disponibilizarei separadamente os valores dessas chaves.
 
@@ -61,3 +65,7 @@ pnpm dev
 Abra no navegador [http://localhost:3000](http://localhost:3000) e comece a gerar seus planos de aula.
 
 > Alternativamente temos já disponilizado o site rodando hospedado na vercel. Acesse agora o [PlanEdu](https://ai-class-planner-nine.vercel.app/)
+
+## Decisões Técnicas
+
+## Desafios Encontrados
