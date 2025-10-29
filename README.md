@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PlanEdu
 
-## Getting Started
+> Este projeto utiliza [node.js](https://nodejs.org/pt/download) e [pnpm](https://pnpm.io/pt/installation#usando-npm)
 
-First, run the development server:
+## Clonando o projeto
+
+Vamos assumir que já tenha instalado o node.js e o [git](https://git-scm.com/install).
+
+Abra um terminal e rode o seguinte comando:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/LeonardoLopesHonda/ai_class_planner.git
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Agora entre no diretório do projeto:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cd ai_class_planner
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Instalando as dependências do projeto
 
-## Learn More
+Como estamos utilizando o `pnpm` para gerenciar os pacotes, iremos mostrar como instalar:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install -g pnpm@latest
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> Assumindo que tenha instalado o `npm`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Estando no diretório do projeto, digite no terminal:
 
-## Deploy on Vercel
+```bash
+pnpm install
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+E aguarde o `pnpm` terminar de instalar as dependências.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Configurando as variáveis de ambiente
+
+Tendo acesso às variáveis de ambiente configure no arquivo `.env`
+
+```env
+NEXT_PUBLIC_GEMINI_API_KEY=
+NEXT_PUBLIC_SUPABASE_API_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+```
+
+Coloque os valores de cada item.
+
+> Por questões de segurança de uso de chaves, para este desafio técnico disponibilizarei separadamente os valores dessas chaves.
+
+## Rodando localmente
+
+Dentro do diretório do projeto, rode:
+
+```bash
+pnpm dev
+```
+
+Abra no navegador [http://localhost:3000](http://localhost:3000) e comece a gerar seus planos de aula.
+
+> Alternativamente temos já disponilizado o site rodando hospedado na vercel. Acesse agora o [PlanEdu](https://ai-class-planner-nine.vercel.app/)
