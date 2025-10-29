@@ -40,7 +40,6 @@ export default function Home() {
       });
 
       const aiResponse = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      // Update the specific response at the correct index
       setResponses((prev) => {
         const newResponses = [...prev];
         newResponses[messageIndex] = aiResponse;
@@ -66,10 +65,8 @@ export default function Home() {
     setMessages([...messages, message]);
     setMessage("");
     
-    // Add placeholder for response
     setResponses([...responses, ""]);
 
-    // Generate response
     await generateResponse(message, currentMessageIndex);
   };
 
@@ -86,7 +83,7 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 pb-8">
-        {/* Messages Area */}
+        {/* Message Area */}
         <div className="flex-1 overflow-y-auto py-8 space-y-6">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
@@ -119,7 +116,7 @@ export default function Home() {
               </div>
             ))
           )}
-          {/* Loading indicator */}
+          {/* Loading */}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3 max-w-[85%]">
@@ -135,7 +132,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Input Form */}
+        {/* Form */}
         <div className="sticky bottom-0 pt-4 bg-white dark:bg-black">
           <form onSubmit={handleSubmit} className="relative">
             <Field>
