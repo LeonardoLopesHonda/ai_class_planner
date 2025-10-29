@@ -138,7 +138,7 @@ export default function Home() {
       <header className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Planedu
+            PlanEdu
           </h1>
         </div>
       </header>
@@ -154,7 +154,7 @@ export default function Home() {
                   Como podemos te ajudar hoje?
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Comece a planejar suas aulas hoje com o Planedu
+                  Comece a planejar suas aulas hoje com o PlanEdu
                 </p>
               </div>
             </div>
