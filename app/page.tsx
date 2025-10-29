@@ -10,18 +10,41 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
   const [responses, setResponses] = useState<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [parsedResponses, setParsedResponses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const instructions = `
-            Olá! Eu sou a Planedu, sua assistente inteligente para criação de planos de aula. Meu objetivo é gerar planos personalizados com IA contendo: 
-              1) Introdução lúdica — uma abertura criativa e envolvente com história ou desafio; 
-              2) Objetivo de aprendizagem da BNCC — descreve o que o aluno deve saber ou fazer; 
-              3) Passo a passo — roteiro detalhado e temporizado da atividade; 
-              4) Rubrica de avaliação — critérios claros de desempenho com níveis como Excelente, Bom, Satisfatório e Precisa de Apoio.
-          `
+    Você é a Planedu, uma IA especialista em criar planos de aula. 
+    Responda **apenas em JSON válido**, sem comentários, sem explicações fora do JSON.
+
+    O formato da resposta deve ser:
+
+      {
+        "titulo": "Título da aula",
+        "introducao": "Introdução lúdica e envolvente",
+        "objetivo_bncc": "Objetivo alinhado à BNCC",
+        "roteiro": "Passo a passo detalhado da atividade",
+        "rubrica_avaliacao": "Critérios de avaliação com níveis: Excelente, Bom, Satisfatório e Precisa de Apoio"
+      }
+
+      Não use markdown, blocos de código, nem texto fora do JSON.
+  `;
+
+  function safeParseAIResponse(response: string) {
+    try {
+      const treated_response = response.replace(/```json|```/g, "").trim();
+      return JSON.parse(treated_response);
+    } catch (err) {
+      console.warn("Falha ao fazer parse do JSON: ", err);
+      return null;
+    }
+  }
 
   // apiKey is defined in .env
-  const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+  const ai = new GoogleGenAI({
+    apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY,
+  });
 
   async function generateResponse(userMessage: string, messageIndex: number) {
     setIsLoading(true);
@@ -35,22 +58,30 @@ export default function Home() {
           },
         ],
         config: {
-          systemInstruction: instructions
-        }
+          systemInstruction: instructions,
+        },
       });
 
       const aiResponse = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+
       setResponses((prev) => {
-        const newResponses = [...prev];
-        newResponses[messageIndex] = aiResponse;
-        return newResponses;
+        const updated = [...prev];
+        updated[messageIndex] = aiResponse;
+        return updated;
+      });
+
+      setParsedResponses((prev) => {
+        const updated = [...prev];
+        updated[messageIndex] = aiResponse;
+        return updated;
       });
     } catch (error) {
-      console.error("Error generating response:", error);
+      console.error("Error ao gerar resposta:", error);
       setResponses((prev) => {
-        const newResponses = [...prev];
-        newResponses[messageIndex] = "Desculpe, ocorreu um erro ao gerar a resposta.";
-        return newResponses;
+        const updated = [...prev];
+        updated[messageIndex] =
+          "Desculpe, ocorreu um erro ao gerar a resposta.";
+        return updated;
       });
     } finally {
       setIsLoading(false);
@@ -60,14 +91,27 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || isLoading) return;
-    
+
     const currentMessageIndex = messages.length;
-    setMessages([...messages, message]);
+    setMessages((prev) => [...prev, message]);
     setMessage("");
-    
-    setResponses([...responses, ""]);
+
+    setResponses((prev) => [...prev, ""]);
+    setParsedResponses((prev) => [...prev, null]);
 
     await generateResponse(message, currentMessageIndex);
+  };
+
+  const lastParsed = parsedResponses[parsedResponses.length - 1];
+
+  const planoDeAula = {
+    entrada_user: { prompt: message },
+    resposta_ia: lastParsed,
+    titulo: lastParsed?.titulo || null,
+    introducao: lastParsed?.introducao || null,
+    objetivo_bncc: lastParsed?.objetivo_bncc || null,
+    roteiro: lastParsed?.roteiro || null,
+    rubrica_avaliacao: lastParsed?.rubrica_avaliacao || null,
   };
 
   return (
@@ -109,7 +153,9 @@ export default function Home() {
                 {responses[idx] && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-3 max-w-[85%]">
-                      <p className="text-sm whitespace-pre-wrap">{responses[idx]}</p>
+                      <p className="text-sm whitespace-pre-wrap">
+                        {responses[idx]}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -122,9 +168,18 @@ export default function Home() {
               <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3 max-w-[85%]">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></div>
                   </div>
                 </div>
               </div>
