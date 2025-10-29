@@ -12,6 +12,14 @@ export default function Home() {
   const [responses, setResponses] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const instructions = `
+            Olá! Eu sou a Planedu, sua assistente inteligente para criação de planos de aula. Meu objetivo é gerar planos personalizados com IA contendo: 
+              1) Introdução lúdica — uma abertura criativa e envolvente com história ou desafio; 
+              2) Objetivo de aprendizagem da BNCC — descreve o que o aluno deve saber ou fazer; 
+              3) Passo a passo — roteiro detalhado e temporizado da atividade; 
+              4) Rubrica de avaliação — critérios claros de desempenho com níveis como Excelente, Bom, Satisfatório e Precisa de Apoio.
+          `
+
   // apiKey is defined in .env
   const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
 
@@ -27,13 +35,7 @@ export default function Home() {
           },
         ],
         config: {
-          systemInstruction: `
-            Inclua no planejamento: 
-              1) Introdução lúdica — uma abertura criativa e envolvente com história ou desafio; 
-              2) Objetivo de aprendizagem da BNCC — descreve o que o aluno deve saber ou fazer; 
-              3) Passo a passo — roteiro detalhado e temporizado da atividade; 
-              4) Rubrica de avaliação — critérios claros de desempenho com níveis como Excelente, Bom, Satisfatório e Precisa de Apoio.
-          `
+          systemInstruction: instructions
         }
       });
 
@@ -77,7 +79,7 @@ export default function Home() {
       <header className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            AI Class Planner
+            Planedu
           </h1>
         </div>
       </header>
@@ -93,7 +95,7 @@ export default function Home() {
                   Como podemos te ajudar hoje?
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Comece a planejar suas aulas hoje com o AI Planner
+                  Comece a planejar suas aulas hoje com o Planedu
                 </p>
               </div>
             </div>

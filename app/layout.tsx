@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Class Planner",
+  title: "Planedu",
   description: "Ferramenta para planejamento de aulas",
 };
 
