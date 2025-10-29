@@ -4,17 +4,71 @@ import { useState } from "react";
 import { Field, FieldContent } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { GoogleGenAI } from "@google/genai";
 
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<string[]>([]);
+  const [responses, setResponses] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // apiKey is defined in .env
+  const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
+
+  async function generateResponse(userMessage: string, messageIndex: number) {
+    setIsLoading(true);
+    try {
+      const res = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: userMessage }],
+          },
+        ],
+        config: {
+          systemInstruction: `
+            Inclua no planejamento: 
+              1) Introdução lúdica — uma abertura criativa e envolvente com história ou desafio; 
+              2) Objetivo de aprendizagem da BNCC — descreve o que o aluno deve saber ou fazer; 
+              3) Passo a passo — roteiro detalhado e temporizado da atividade; 
+              4) Rubrica de avaliação — critérios claros de desempenho com níveis como Excelente, Bom, Satisfatório e Precisa de Apoio.
+          `
+        }
+      });
+
+      const aiResponse = res.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      // Update the specific response at the correct index
+      setResponses((prev) => {
+        const newResponses = [...prev];
+        newResponses[messageIndex] = aiResponse;
+        return newResponses;
+      });
+    } catch (error) {
+      console.error("Error generating response:", error);
+      setResponses((prev) => {
+        const newResponses = [...prev];
+        newResponses[messageIndex] = "Desculpe, ocorreu um erro ao gerar a resposta.";
+        return newResponses;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    if (!message.trim() || isLoading) return;
     
+    const currentMessageIndex = messages.length;
     setMessages([...messages, message]);
     setMessage("");
+    
+    // Add placeholder for response
+    setResponses([...responses, ""]);
+
+    // Generate response
+    await generateResponse(message, currentMessageIndex);
   };
 
   return (
@@ -45,12 +99,37 @@ export default function Home() {
             </div>
           ) : (
             messages.map((msg, idx) => (
-              <div key={idx} className="flex flex-col gap-2">
-                <div className="bg-blue-500 text-white rounded-lg px-4 py-3 self-end max-w-[85%]">
-                  <p className="text-sm">{msg}</p>
+              <div key={idx} className="flex flex-col gap-4">
+                {/* User Message */}
+                <div className="flex justify-end">
+                  <div className="bg-blue-500 text-white rounded-lg px-4 py-3 max-w-[85%]">
+                    <p className="text-sm whitespace-pre-wrap">{msg}</p>
+                  </div>
                 </div>
+                {/* AI Response */}
+                {responses[idx] && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 py-3 max-w-[85%]">
+                      <p className="text-sm whitespace-pre-wrap">{responses[idx]}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
+          )}
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3 max-w-[85%]">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -77,7 +156,7 @@ export default function Home() {
                     type="submit"
                     size="sm"
                     className="absolute bottom-2 right-2 h-8 w-8 p-0 rounded-full"
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || isLoading}
                   >
                     <svg
                       width="16"
